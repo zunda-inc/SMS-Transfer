@@ -3,7 +3,7 @@ Description=SMS Transfer to Slack
 Requires=network.target ModemManager.service NetworkManager.service
 
 [Service]
-ExecStart=/usr/bin/python /home/shirakobato/sms2slack/transfer.py
+ExecStart=/usr/bin/python /path/to/transfer.py
 Type=simple
 Restart=always
 User=root
