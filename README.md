@@ -10,6 +10,7 @@ Relay SMS to Slack.
 - Install Depended Packages
 - Setting Cellular Network by Network Manager and Modem Manager
 - Copy, Rename and Edit `config.json`
+- Configure Services
 - Connect Dongle to Raspberry Pi
 - Start Services
 - Test
