@@ -1,0 +1,10 @@
+[Unit]
+Description=EC-25 Auto Reconnect
+After=NetworkManager-wait-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/shirakobato/sms2slack/alive.sh <connection name> <interval> <standby>
+
+[Install]
+WantedBy=multi-user.target
