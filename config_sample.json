@@ -1,11 +1,9 @@
 {
-    "slack":
-    {
-        "channel":"#bot-sandbox",
-        "token":"xoxb-"
+    "slack": {
+        "channel": "#bot-sandbox",
+        "token": "xoxb-"
     },
-    "general":
-    {
-	"interval":3
+    "general": {
+        "interval": 3
     }
 }
