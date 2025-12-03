@@ -1,13 +1,16 @@
 [Unit]
 Description=SMS Transfer to Slack
 Requires=network.target ModemManager.service NetworkManager.service
+After=network.target ModemManager.service NetworkManager.service
+StartLimitBurst=5
+StartLimitIntervalSec=60
 
 [Service]
-ExecStart=/usr/bin/python /home/shirakobato/sms2slack/transfer.py
+ExecStart=/usr/bin/python3 /home/shirakobato/sms2slack/transfer.py
 Type=simple
 Restart=on-failure
+RestartSec=10
 User=root
-StartLimitBurst=0
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
