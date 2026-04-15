@@ -48,32 +48,72 @@
     Network ManagerとModem Managerを使用して、USBドングルがセルラーネットワークに接続できるよう設定します。
 
 3.  **設定ファイルの準備**:
-    `config.json.template`を`config.json`としてコピーし、`SLACK_API_TOKEN`と`SLACK_CHANNEL`を設定します。
+    `config_sample.json`を`config.json`としてコピーし、SlackトークンとチャンネルIDを設定します。
 
     ```bash
-    cp config.json.template config.json
+    cp config_sample.json config.json
+    # config.json を編集して slack.token と slack.channel を設定する
+    chmod 600 config.json  # 他ユーザーから保護
     ```
 
-4.  **サービスの構成**:
-    systemdサービスファイル (`sms-transfer.service`) を設定し、自動起動を可能にします。
+    | キー | 説明 |
+    |------|------|
+    | `slack.token` | Slack Bot Token (`xoxb-...`) |
+    | `slack.channel` | 転送先チャンネル (例: `#alerts`) |
+    | `general.interval` | ドングルのポーリング間隔 (秒) |
 
-5.  **ハードウェアの接続**:
+4.  **パスのカスタマイズ**:
+    `sms2slack.service` および `wwan_reconnect.service` 内の `ExecStart` パスを、実際のインストール先に合わせて変更します。デフォルトは `/opt/sms-transfer/` を想定しています。
+
+    また、`wwan_reconnect.service` が参照する環境ファイルを作成します。
+
+    ```bash
+    sudo mkdir -p /etc/sms-transfer
+    echo "CONNECTION_NAME=<your-connection-name>" | sudo tee /etc/sms-transfer/env
+    sudo chmod 600 /etc/sms-transfer/env
+    # 接続名の確認: nmcli c show
+    ```
+
+5.  **サービスの構成**:
+    systemdサービスファイルをコピーし、デーモンをリロードします。
+
+    ```bash
+    sudo cp sms2slack.service /etc/systemd/system/
+    sudo cp wwan_reconnect.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    ```
+
+    > **注意**: `sms2slack.service` はデフォルトで `User=pi` で動作します。異なるユーザーで実行する場合はサービスファイルを編集してください。
+
+6.  **ハードウェアの接続**:
     Soracom Onyx LTE USBドングルにnano SIMカードを挿入し、Raspberry Piに接続します。
 
-6.  **サービスの開始とテスト**:
+7.  **サービスの開始とテスト**:
     サービスを開始し、動作を確認します。
 
     ```bash
-    sudo systemctl start sms-transfer.service
-    sudo journalctl -u sms-transfer.service -f
+    sudo systemctl start sms2slack.service
+    sudo journalctl -u sms2slack.service -f
     ```
 
-7.  **サービスの有効化**:
+8.  **サービスの有効化**:
     システム起動時にサービスが自動で開始されるように設定します。
 
     ```bash
-    sudo systemctl enable sms-transfer.service
+    sudo systemctl enable sms2slack.service
+    sudo systemctl enable wwan_reconnect.service
     ```
+
+-----
+
+### 🔧 トラブルシューティング
+
+| 症状 | 確認コマンド |
+|------|------------|
+| SMSが届かない | `mmcli -L` でモデムが認識されているか確認 |
+| Slackに転送されない | `journalctl -u sms2slack -f` でエラーを確認 |
+| 接続が切れる | `nmcli c show` で接続名を確認し、`/etc/sms-transfer/env` の `CONNECTION_NAME` と一致しているか確認 |
+| サービスが起動しない | `systemctl status sms2slack.service` で詳細を確認 |
 
 -----
 
@@ -139,32 +179,72 @@ This project is a Python tool that automatically relays SMS messages received vi
     Use Network Manager and Modem Manager to configure the USB dongle to connect to the cellular network.
 
 3.  **Prepare the Configuration File**:
-    Copy `config.json.template` to `config.json` and set your `SLACK_API_TOKEN` and `SLACK_CHANNEL`.
+    Copy `config_sample.json` to `config.json` and fill in your Slack token and channel.
 
     ```bash
-    cp config.json.template config.json
+    cp config_sample.json config.json
+    # Edit config.json to set slack.token and slack.channel
+    chmod 600 config.json  # Protect from other users
     ```
 
-4.  **Configure Services**:
-    Set up the systemd service file (`sms-transfer.service`) to enable automatic startup and background execution.
+    | Key | Description |
+    |-----|-------------|
+    | `slack.token` | Slack Bot Token (`xoxb-...`) |
+    | `slack.channel` | Target channel (e.g. `#alerts`) |
+    | `general.interval` | Dongle polling interval in seconds |
 
-5.  **Connect Hardware**:
+4.  **Customize Paths**:
+    Update the `ExecStart` path in both `sms2slack.service` and `wwan_reconnect.service` to match your installation directory. The default assumes `/opt/sms-transfer/`.
+
+    Also create the environment file used by `wwan_reconnect.service`:
+
+    ```bash
+    sudo mkdir -p /etc/sms-transfer
+    echo "CONNECTION_NAME=<your-connection-name>" | sudo tee /etc/sms-transfer/env
+    sudo chmod 600 /etc/sms-transfer/env
+    # Check your connection name: nmcli c show
+    ```
+
+5.  **Configure Services**:
+    Copy the service files and reload the daemon.
+
+    ```bash
+    sudo cp sms2slack.service /etc/systemd/system/
+    sudo cp wwan_reconnect.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    ```
+
+    > **Note**: `sms2slack.service` runs as `User=pi` by default. Edit the service file if your deployment user is different.
+
+6.  **Connect Hardware**:
     Insert a nano SIM card into the Soracom Onyx LTE USB dongle and connect it to a USB port on the Raspberry Pi.
 
-6.  **Start and Test the Service**:
+7.  **Start and Test the Service**:
     Once configured, start the service and check its operation.
 
     ```bash
-    sudo systemctl start sms-transfer.service
-    sudo journalctl -u sms-transfer.service -f
+    sudo systemctl start sms2slack.service
+    sudo journalctl -u sms2slack.service -f
     ```
 
-7.  **Enable the Service**:
+8.  **Enable the Service**:
     Configure the service to start automatically on system boot.
 
     ```bash
-    sudo systemctl enable sms-transfer.service
+    sudo systemctl enable sms2slack.service
+    sudo systemctl enable wwan_reconnect.service
     ```
+
+-----
+
+### 🔧 Troubleshooting
+
+| Symptom | Command |
+|---------|---------|
+| No SMS detected | `mmcli -L` — check modem is recognized |
+| Not forwarding to Slack | `journalctl -u sms2slack -f` — check for errors |
+| Connection drops | `nmcli c show` — verify connection name matches `CONNECTION_NAME` in `/etc/sms-transfer/env` |
+| Service won't start | `systemctl status sms2slack.service` — check detailed status |
 
 -----
 

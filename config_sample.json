@@ -4,6 +4,7 @@
         "token": "xoxb-"
     },
     "general": {
+        "_interval_comment": "Polling interval in seconds. How often the dongle is checked for new SMS messages.",
         "interval": 3
     }
 }
