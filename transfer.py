@@ -45,11 +45,7 @@ signal.signal(signal.SIGINT, _handle_signal)
 
 def post_to_slack(text):
     client = WebClient(token=config['slack']['token'])
-    try:
-        client.chat_postMessage(channel=config['slack']['channel'], text=text)
-    except SlackApiError as e:
-        logger.error("Slack API error: %s (status %s)", e.response.get("error"), e.response.status_code)
-        raise
+    client.chat_postMessage(channel=config['slack']['channel'], text=text)
 
 
 def transfer():
@@ -67,8 +63,8 @@ def transfer():
                 logger.info("SMS received from %s, Message: %s", number, text)
                 try:
                     post_to_slack(f"{number}\n{text}")
-                except SlackApiError:
-                    logger.warning("Slack post failed — message kept on dongle for retry.")
+                except Exception:
+                    logger.exception("Slack post failed — message kept on dongle for retry.")
                     continue
                 try:
                     messaging.delete_sync(message.get_path())
