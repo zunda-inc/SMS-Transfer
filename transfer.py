@@ -1,56 +1,82 @@
 #!/usr/bin/env python3
-from gi.repository import Gio, ModemManager
 import json
+import logging
 import os
+import signal
+import sys
 import time
+
+import gi
+gi.require_version('ModemManager', '1.0')
+from gi.repository import Gio, ModemManager
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
-import gi
-gi.require_version('ModemManager', '1.0')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
-with open(os.path.join(os.path.dirname(__file__), 'config.json')) as f:
-    config = json.load(f)
+def _load_config():
+    path = os.path.join(os.path.dirname(__file__), 'config.json')
+    with open(path) as f:
+        cfg = json.load(f)
+    required = [("slack", "token"), ("slack", "channel"), ("general", "interval")]
+    for section, key in required:
+        if not cfg.get(section, {}).get(key):
+            raise ValueError(f"Missing config: {section}.{key}")
+    return cfg
+
+
+config = _load_config()
+
+
+def _handle_signal(sig, frame):
+    logger.info("Received signal %s, shutting down.", sig)
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, _handle_signal)
+signal.signal(signal.SIGINT, _handle_signal)
 
 
 def post_to_slack(text):
     client = WebClient(token=config['slack']['token'])
-    try:
-        response = client.chat_postMessage(
-            channel=config['slack']['channel'], text=text)
-        # assert response["message"]["text"] == "Hello world!"
-    except SlackApiError as e:
-        # You will get a SlackApiError if "ok" is False
-        assert e.response["ok"] is False
-        # str like 'invalid_auth', 'channel_not_found'
-        assert e.response["error"]
-        print(f"Got an error: {e.response['error']}")
-        # Also receive a corresponding status_code
-        assert isinstance(e.response.status_code, int)
-        print(f"Received a response status_code: {e.response.status_code}")
+    client.chat_postMessage(channel=config['slack']['channel'], text=text)
 
 
 def transfer():
-    # sync dongle
-    manager = ModemManager.Manager.new_sync(
-        Gio.bus_get_sync(Gio.BusType.SYSTEM, None),
-        Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START, None)
-    manager_objects = manager.get_objects()
-    for manager_object in manager_objects:
-        # check messages
-        messaging = manager_object.get_modem_messaging()
-        messages = messaging.list_sync()
-        # post to slack each messages
-        for message in messages:
-            post_to_slack(f"{message.get_number()}\n{message.get_text()}")
-            # delete message from dongle or sim
-            messaging.delete_sync(message.get_path())
+    try:
+        manager = ModemManager.Manager.new_sync(
+            Gio.bus_get_sync(Gio.BusType.SYSTEM, None),
+            Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START, None)
+        manager_objects = manager.get_objects()
+        for manager_object in manager_objects:
+            messaging = manager_object.get_modem_messaging()
+            messages = messaging.list_sync()
+            for message in messages:
+                number = message.get_number()
+                text = message.get_text()
+                logger.info("SMS received from %s, Message: %s", number, text)
+                try:
+                    post_to_slack(f"{number}\n{text}")
+                except Exception:
+                    logger.exception("Slack post failed — message kept on dongle for retry.")
+                    continue
+                try:
+                    messaging.delete_sync(message.get_path())
+                    logger.info("Message forwarded and deleted.")
+                except Exception:
+                    logger.exception("Delete failed after successful Slack post — message may be re-sent on next poll.")
+    except Exception:
+        logger.exception("Error during transfer()")
 
 
-# start
 if __name__ == '__main__':
+    logger.info("SMS Transfer service starting.")
     while True:
         transfer()
         time.sleep(config['general']['interval'])

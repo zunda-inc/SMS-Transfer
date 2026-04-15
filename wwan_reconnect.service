@@ -1,10 +1,17 @@
+# Edit ExecStart and EnvironmentFile paths to match your installation before deploying.
+# Create /etc/sms-transfer/env with: CONNECTION_NAME=<your-nmcli-connection-name>
+# Run `nmcli c show` to find your connection name, then `sudo systemctl daemon-reload`.
+
 [Unit]
-Description=EC-25 Auto Reconnect
+Description=Cellular Connection Monitor (auto-reconnect)
 After=NetworkManager-wait-online.target
 
 [Service]
 Type=simple
-ExecStart=/home/shirakobato/sms2slack/alive.sh aeonmobile 60 30
+EnvironmentFile=/etc/sms-transfer/env
+ExecStart=/opt/sms-transfer/alive.sh ${CONNECTION_NAME} 60 30
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
