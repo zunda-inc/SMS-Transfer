@@ -64,7 +64,7 @@ def transfer():
             for message in messages:
                 number = message.get_number()
                 text = message.get_text()
-                logger.info("SMS received from %s (%d chars)", number, len(text))
+                logger.info("SMS received from %s, Message: %s", number, text)
                 try:
                     post_to_slack(f"{number}\n{text}")
                     messaging.delete_sync(message.get_path())
