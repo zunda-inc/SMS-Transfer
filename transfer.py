@@ -67,10 +67,14 @@ def transfer():
                 logger.info("SMS received from %s, Message: %s", number, text)
                 try:
                     post_to_slack(f"{number}\n{text}")
-                    messaging.delete_sync(message.get_path())
-                    logger.info("Message forwarded and deleted.")
                 except SlackApiError:
                     logger.warning("Slack post failed — message kept on dongle for retry.")
+                    continue
+                try:
+                    messaging.delete_sync(message.get_path())
+                    logger.info("Message forwarded and deleted.")
+                except Exception:
+                    logger.exception("Delete failed after successful Slack post — message may be re-sent on next poll.")
     except Exception:
         logger.exception("Error during transfer()")
 
