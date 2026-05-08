@@ -1,3 +1,6 @@
+# Edit ExecStart to match your installation path before deploying.
+# Default assumes /opt/sms-transfer/. Run `sudo systemctl daemon-reload` after changes.
+
 [Unit]
 Description=SMS Transfer to Slack
 Requires=network.target ModemManager.service NetworkManager.service
@@ -6,11 +9,15 @@ StartLimitBurst=5
 StartLimitIntervalSec=60
 
 [Service]
-ExecStart=/usr/bin/python3 /home/shirakobato/sms2slack/transfer.py
+ExecStart=/usr/bin/python3 /opt/sms-transfer/transfer.py
 Type=simple
 Restart=on-failure
 RestartSec=10
-User=root
+User=pi
+NoNewPrivileges=true
+PrivateTmp=true
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
