@@ -9,7 +9,7 @@ After=NetworkManager-wait-online.target
 [Service]
 Type=simple
 EnvironmentFile=/etc/sms-transfer/env
-ExecStart=/opt/sms-transfer/alive.sh ${CONNECTION_NAME} 60 30
+ExecStart=/opt/sms-transfer/alive.sh "${CONNECTION_NAME}" 60 30
 StandardOutput=journal
 StandardError=journal
 

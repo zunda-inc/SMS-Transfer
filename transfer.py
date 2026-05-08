@@ -43,8 +43,7 @@ signal.signal(signal.SIGTERM, _handle_signal)
 signal.signal(signal.SIGINT, _handle_signal)
 
 
-def post_to_slack(text):
-    client = WebClient(token=config['slack']['token'])
+def post_to_slack(text, client=WebClient(token=config['slack']['token'])):
     client.chat_postMessage(channel=config['slack']['channel'], text=text)
 
 
@@ -56,6 +55,8 @@ def transfer():
         manager_objects = manager.get_objects()
         for manager_object in manager_objects:
             messaging = manager_object.get_modem_messaging()
+            if not messaging:
+                continue
             messages = messaging.list_sync()
             for message in messages:
                 number = message.get_number()
