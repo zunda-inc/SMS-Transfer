@@ -43,7 +43,9 @@ signal.signal(signal.SIGTERM, _handle_signal)
 signal.signal(signal.SIGINT, _handle_signal)
 
 
-def post_to_slack(text, client=WebClient(token=config['slack']['token'])):
+def post_to_slack(text, client=None):
+    if client is None:
+        client = WebClient(token=config['slack']['token'])
     client.chat_postMessage(channel=config['slack']['channel'], text=text)
 
 
@@ -71,6 +73,7 @@ def transfer(manager):
                     logger.exception("Delete failed after successful Slack post — message may be re-sent on next poll.")
     except Exception:
         logger.exception("Error during transfer()")
+        raise
 
 
 if __name__ == '__main__':
