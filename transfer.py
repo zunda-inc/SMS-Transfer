@@ -47,11 +47,8 @@ def post_to_slack(text, client=WebClient(token=config['slack']['token'])):
     client.chat_postMessage(channel=config['slack']['channel'], text=text)
 
 
-def transfer():
+def transfer(manager):
     try:
-        manager = ModemManager.Manager.new_sync(
-            Gio.bus_get_sync(Gio.BusType.SYSTEM, None),
-            Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START, None)
         manager_objects = manager.get_objects()
         for manager_object in manager_objects:
             messaging = manager_object.get_modem_messaging()
@@ -78,6 +75,9 @@ def transfer():
 
 if __name__ == '__main__':
     logger.info("SMS Transfer service starting.")
+    manager = ModemManager.Manager.new_sync(
+        Gio.bus_get_sync(Gio.BusType.SYSTEM, None),
+        Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START, None)
     while True:
-        transfer()
+        transfer(manager)
         time.sleep(config['general']['interval'])
